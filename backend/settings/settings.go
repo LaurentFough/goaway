@@ -16,12 +16,57 @@ import (
 
 var log = logging.GetLogger()
 
+func GetBaseConfigDir() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine user config directory: %w", err)
+	}
+	
+	return filepath.Join(baseDir, "goaway"), nil
+}
+
+func GetConfigDir() (string, error) {
+	base, err := GetBaseConfigDir()
+	if err != nil {
+		return "", err
+	}
+	
+	return filepath.Join(base, "config"), nil
+}
+
+func GetDataDir() (string, error) {
+	base, err := GetBaseConfigDir()
+	if err != nil {
+		return "", err
+	}
+	
+	return filepath.Join(base, "data"), nil
+}
+
+func GetSettingsPath() (string, error) {
+	dir, err := GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+	
+	return filepath.Join(dir, "settings.yaml"), nil
+}
+
+func GetDatabasePath() (string, error) {
+	dir, err := GetDataDir()
+	if err != nil {
+		return "", err
+	}
+	
+	return filepath.Join(dir, "database.db"), nil
+}
+
 func LoadSettings() (Config, error) {
 	var config Config
 
-	path, err := os.Getwd()
+	path, err := getSettingsPath()
 	if err != nil {
-		return Config{}, fmt.Errorf("could not determine current directory: %w", err)
+		return Config{}, err
 	}
 	path = filepath.Join(path, "config", "settings.yaml")
 
@@ -58,8 +103,20 @@ func (config *Config) Save() {
 		log.Error("Could not parse settings %v", err)
 		return
 	}
-
-	if err := os.WriteFile("./config/settings.yaml", data, 0644); err != nil {
+	
+	path, err := getSettingsPath()
+	if err != nil {
+		log.Error("Could not determine settings path %v", err)
+		return
+	}
+	
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Error("Could not create config directory %v", err)
+		return
+	}
+	
+	if err := os.WriteFile(path, data, 0644); err != nil {
 		log.Error("Could not save settings %v", err)
 	}
 }
