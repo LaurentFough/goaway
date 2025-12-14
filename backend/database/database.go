@@ -10,20 +10,24 @@ import (
 )
 
 func Initialize() *gorm.DB {
-	if err := os.MkdirAll("data", 0755); err != nil {
-		log.Fatal("failed to create data directory: %w", err)
+	databasePath, err := GetDatabasePath()
+	if err != nil {
+		log.Fatal("failed to determine database path: %v", err)
 	}
-
-	databasePath := filepath.Join("data", "database.db")
+	
+	if err := os.MkdirAll(filepath.Dir(databasePath), 0755); err != nil {
+		log.Fatal("failed to create data directory: %v", err)
+	}
+	
 	db, err := gorm.Open(sqlite.Open(databasePath), &gorm.Config{})
 	if err != nil {
-		log.Fatal("failed while initializing database: %w", err)
+		log.Fatal("failed while initializing database: %v", err)
 	}
-
+	
 	if err := AutoMigrate(db); err != nil {
-		log.Fatal("auto migrate failed: %w", err)
+		log.Fatal("auto migrate failed: %v", err)
 	}
-
+	
 	return db
 }
 
